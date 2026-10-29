@@ -68,12 +68,22 @@ fn run_server(listen_addrs: &SocketAddr) -> Result<(), ServerRunError> {
 enum HandleClientError {
     #[error("Failed to get the client's socket address: {0}")]
     PeerAddrFailed(std::io::Error),
+    #[error("Failed while trying to read a line from the client: {0}")]
+    LineReadError(std::io::Error),
 }
 
 fn handle_client(stream: TcpStream) -> Result<(), HandleClientError> {
     let peer_addr = stream
         .peer_addr()
         .map_err(HandleClientError::PeerAddrFailed)?;
-    println!("New connection from client at {peer_addr}");
+    println!("*** New client connection from {peer_addr} ***");
+
+    use std::io::BufRead;
+    let lines = std::io::BufReader::new(stream).lines();
+    for line_result in lines {
+        let line = line_result.map_err(HandleClientError::LineReadError)?;
+        println!("{peer_addr} => {line}");
+    }
+
     Ok(())
 }
