@@ -1,9 +1,31 @@
 [package]
 name = "rss-server-side"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
+server-core = { path = "server-core"}
+hyper = { workspace = true }
+tokio = { workspace = true }
+http-body-util = { workspace = true}
+hyper-util = { workspace = true }
+bytes = { workspace = true }
+pretty_env_logger = { workspace = true }
+
+[workspace]
+resolver = "3"
+members = ["server-core"]
+
+[workspace.package]
+edition = "2024"
+authors = ["Aaron Stave <astave@pdx.edu>", "Elliot Roberts <relliot@pdx.edu>", "Quentin Scheetz <qscheetz@pdx.edu>", "Tuan Vu <tuanvu@pdx.edu>", "Zihui Zeng <zihui@pdx.edu>", "Cristian Hernandez <Cristhe@pdx.edu>", "Kaevin Barta <kbarta@pdx.edu>"]
+repository = "https://github.com/a-stave/RSS-Server-Side"
+license = "AGPL-3.0-only"
+
+[workspace.dependencies]
 hyper = { version = "1", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 http-body-util = "0.1"
