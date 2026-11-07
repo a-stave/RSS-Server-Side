@@ -68,7 +68,7 @@ In order to minimize issues, the team should adhere to the following:
 
 | Type          | Example              |
 | ------------- | -------------------- |
-| Feature       | `feature/caching`    |
+| Feature       | `feat/caching`       |
 | Bug fix       | `fix/name-collision` |
 | Tests         | `test/log-to-CLI`    |
 | Documentation | `doc/readme`         |
