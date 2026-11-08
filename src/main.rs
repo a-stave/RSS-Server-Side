@@ -9,12 +9,38 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response};
 use hyper_util::rt::{TokioIo, TokioTimer};
+use reqwest::Client;
 use tokio::net::TcpListener;
 
 // An async function that consumes a request, does nothing with it and returns a
 // response.
-async fn hello(_: Request<impl hyper::body::Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello World!"))))
+async fn fetch_url(req: Request<impl hyper::body::Body>, client: Client) -> Result<Response<Full<Bytes>>, Infallible> {
+    let query = req.uri().query().unwrap_or("");
+
+    let url = query
+        .strip_prefix("url=")
+        .unwrap_or("");
+
+    if url.is_empty() {
+        return Ok(Response::new(
+            Full::new(Bytes::from("Missing url parameter"))
+        ));
+    }
+
+    match client.get(url).send().await {
+        Ok(resp) => {
+            let text = resp.text().await.unwrap_or_default();
+
+            Ok(Response::new(
+                Full::new(Bytes::from(text))
+            ))
+        }
+        Err(e) => {
+            Ok(Response::new(
+                Full::new(Bytes::from(format!("Error fetching url: {}", e)))
+            ))
+        }
+    }
 }
 
 #[tokio::main]
@@ -23,6 +49,9 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // This address is localhost
     let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
+
+    // Create a reqwest client to be used for fetching URLs
+    let client = Client::new();
 
     // Bind to the port and listen for incoming TCP connections
     let listener = TcpListener::bind(addr).await?;
@@ -41,6 +70,8 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // `hyper::rt` IO traits.
         let io = TokioIo::new(tcp);
 
+        let client = client.clone();
+
         // Spin up a new task in Tokio so we can continue to listen for new TCP connection on the
         // current task without waiting for the processing of the HTTP1 connection we just received
         // to finish
@@ -49,7 +80,13 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // HTTP requests received on that connection to the `hello` function
             if let Err(err) = http1::Builder::new()
                 .timer(TokioTimer::new())
-                .serve_connection(io, service_fn(hello))
+                .serve_connection(
+                    io, 
+                    service_fn(move |req| {
+                    let client = client.clone(); 
+                    fetch_url(req, client)
+                }),
+                )
                 .await
             {
                 println!("Error serving connection: {:?}", err);
