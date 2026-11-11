@@ -14,32 +14,30 @@ use tokio::net::TcpListener;
 
 // An async function that consumes a request, does nothing with it and returns a
 // response.
-async fn fetch_url(req: Request<impl hyper::body::Body>, client: Client) -> Result<Response<Full<Bytes>>, Infallible> {
+async fn fetch_url(
+    req: Request<impl hyper::body::Body>,
+    client: &Client,
+) -> Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().query().unwrap_or("");
 
-    let url = query
-        .strip_prefix("url=")
-        .unwrap_or("");
+    let url = query.strip_prefix("url=").unwrap_or("");
 
     if url.is_empty() {
-        return Ok(Response::new(
-            Full::new(Bytes::from("Missing url parameter"))
-        ));
+        return Ok(Response::new(Full::new(Bytes::from(
+            "Missing url parameter",
+        ))));
     }
 
     match client.get(url).send().await {
         Ok(resp) => {
             let text = resp.text().await.unwrap_or_default();
 
-            Ok(Response::new(
-                Full::new(Bytes::from(text))
-            ))
+            Ok(Response::new(Full::new(Bytes::from(text))))
         }
-        Err(e) => {
-            Ok(Response::new(
-                Full::new(Bytes::from(format!("Error fetching url: {}", e)))
-            ))
-        }
+        Err(e) => Ok(Response::new(Full::new(Bytes::from(format!(
+            "Error fetching url: {}",
+            e
+        ))))),
     }
 }
 
@@ -70,26 +68,21 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // `hyper::rt` IO traits.
         let io = TokioIo::new(tcp);
 
-        let client = client.clone();
-
         // Spin up a new task in Tokio so we can continue to listen for new TCP connection on the
         // current task without waiting for the processing of the HTTP1 connection we just received
         // to finish
-        tokio::task::spawn(async move {
-            // Handle the connection from the client using HTTP1 and pass any
-            // HTTP requests received on that connection to the `hello` function
-            if let Err(err) = http1::Builder::new()
-                .timer(TokioTimer::new())
-                .serve_connection(
-                    io, 
-                    service_fn(move |req| {
-                    let client = client.clone(); 
-                    fetch_url(req, client)
-                }),
-                )
-                .await
-            {
-                println!("Error serving connection: {:?}", err);
+        tokio::task::spawn({
+            let client = client.clone();
+            async move {
+                // Handle the connection from the client using HTTP1 and pass any
+                // HTTP requests received on that connection to the `hello` function
+                if let Err(err) = http1::Builder::new()
+                    .timer(TokioTimer::new())
+                    .serve_connection(io, service_fn(|req| fetch_url(req, &client)))
+                    .await
+                {
+                    println!("Error serving connection: {:?}", err);
+                }
             }
         });
     }
