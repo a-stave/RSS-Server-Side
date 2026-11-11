@@ -1,15 +1,7 @@
 # RSS-Server-Side
+
 An Open Source web-based feed reader built for ease of use and efficient fetching. Part of CS Capstone FW26!
 
-## License
-
-Copyright (C) 2026 The RSS-Server-Side Contributors
-
-This project is licensed under the GNU Affero General Public License, version 3 only
-(AGPL-3.0-only). See [LICENSE](LICENSE) for the full text.
-
-Because this is a network service, the AGPL requires that users interacting with a
-modified version over a network be offered the corresponding source code.
 # Project Overview
 
 Welcome to _RSS Server-side,_ an open-source web server for monitoring web resources. It provides a reusable backend service that makes it easy for client-side applications to track updates without having to implement their own polling, caching, and conditional request logic. Our goal is to make a server that embodies "politeness," using `ETag` and `Last-Modified` to minimize unnecessary requests while making it easier for developers to build apps that use popular protocols like RSS and Atom.
@@ -84,3 +76,13 @@ In order to minimize issues, the team should adhere to the following:
 | Bug fix       | `fix/name-collision` |
 | Tests         | `test/log-to-CLI`    |
 | Documentation | `doc/readme`         |
+
+## License
+
+Copyright (C) 2026 The RSS-Server-Side Contributors
+
+This project is licensed under the GNU Affero General Public License, version 3 only
+(AGPL-3.0-only). See [LICENSE](LICENSE) for the full text.
+
+Because this is a network service, the AGPL requires that users interacting with a
+modified version over a network be offered the corresponding source code.
