@@ -1,3 +1,105 @@
-fn main() {
-    println!("Hello, world!");
+#![deny(warnings)]
+
+use std::convert::Infallible;
+use std::net::SocketAddr;
+
+use bytes::Bytes;
+use http_body_util::Full;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request, Response};
+use hyper_util::rt::{TokioIo, TokioTimer};
+use reqwest::Client;
+use tokio::net::TcpListener;
+
+// An async function that consumes a request, does nothing with it and returns a
+// response.
+async fn fetch_url(
+    req: Request<impl hyper::body::Body>,
+    client: &Client,
+) -> Result<Response<Full<Bytes>>, Infallible> {
+    let query = req.uri().query().unwrap_or("");
+
+    let url = query.strip_prefix("url=").unwrap_or("");
+
+    if url.is_empty() {
+        return Ok(Response::new(Full::new(Bytes::from(
+            "Missing url parameter",
+        ))));
+    }
+
+    match client.get(url).send().await {
+        Ok(resp) => {
+            let text = resp.text().await.unwrap_or_default();
+
+            Ok(Response::new(Full::new(Bytes::from(text))))
+        }
+        Err(e) => Ok(Response::new(Full::new(Bytes::from(format!(
+            "Error fetching url: {}",
+            e
+        ))))),
+    }
+}
+
+#[tokio::main]
+pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pretty_env_logger::init();
+
+    // This address is localhost
+    let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
+
+    // Create a reqwest client to be used for fetching URLs
+    let client = Client::new();
+
+    // Bind to the port and listen for incoming TCP connections
+    let listener = TcpListener::bind(addr).await?;
+    println!("Listening on http://{}", addr);
+    loop {
+        // When an incoming TCP connection is received grab a TCP stream for
+        // client<->server communication.
+        //
+        // Note, this is a .await point, this loop will loop forever but is not a busy loop. The
+        // .await point allows the Tokio runtime to pull the task off of the thread until the task
+        // has work to do. In this case, a connection arrives on the port we are listening on and
+        // the task is woken up, at which point the task is then put back on a thread, and is
+        // driven forward by the runtime, eventually yielding a TCP stream.
+        let (tcp, _) = listener.accept().await?;
+        // Use an adapter to access something implementing `tokio::io` traits as if they implement
+        // `hyper::rt` IO traits.
+        let io = TokioIo::new(tcp);
+
+        // Spin up a new task in Tokio so we can continue to listen for new TCP connection on the
+        // current task without waiting for the processing of the HTTP1 connection we just received
+        // to finish
+        tokio::task::spawn({
+            let client = client.clone();
+            async move {
+                // Handle the connection from the client using HTTP1 and pass any
+                // HTTP requests received on that connection to the `hello` function
+                if let Err(err) = http1::Builder::new()
+                    .timer(TokioTimer::new())
+                    .serve_connection(io, service_fn(|req| fetch_url(req, &client)))
+                    .await
+                {
+                    println!("Error serving connection: {:?}", err);
+                }
+            }
+        });
+    }
+}
+
+/* ------------------ Tests ------------------ */
+#[cfg(test)]
+mod tests {
+
+    // Unit tests are pretty simple and consist of three things:
+    //  1. A descriptive name so that if it fails you can tell what went wrong at CL
+    //  2. A function call, with some inputs (hardcoded, generated, or test fixture)
+    //  3. An assertion that the output is what you expect
+    #[test]
+    #[ignore = "Example only: Use this to create unit tests in future modules"]
+    fn descriptive_test_name() {
+        let result = 2 + 2;
+        assert_eq!(result, 4);
+    }
 }
