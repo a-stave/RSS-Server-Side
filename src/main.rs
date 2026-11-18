@@ -91,7 +91,6 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 /* ------------------ Tests ------------------ */
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Unit tests are pretty simple and consist of three things:
     //  1. A descriptive name so that if it fails you can tell what went wrong at CL
