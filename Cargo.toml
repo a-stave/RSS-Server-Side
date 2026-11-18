@@ -7,7 +7,6 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-server-core = { path = "server-core"}
 hyper = { workspace = true }
 tokio = { workspace = true }
 http-body-util = { workspace = true}
@@ -18,7 +17,6 @@ reqwest = { workspace = true }
 
 [workspace]
 resolver = "3"
-members = ["server-core"]
 
 [workspace.package]
 edition = "2024"

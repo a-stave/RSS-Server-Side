@@ -87,3 +87,20 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         });
     }
 }
+
+/* ------------------ Tests ------------------ */
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Unit tests are pretty simple and consist of three things:
+    //  1. A descriptive name so that if it fails you can tell what went wrong at CL
+    //  2. A function call, with some inputs (hardcoded, generated, or test fixture)
+    //  3. An assertion that the output is what you expect
+    #[test]
+    fn descriptive_test_name() {
+        // let result = add(2, 2);
+        // assert_eq!(result, 4);
+        assert!(true);
+    }
+}

@@ -860,7 +860,6 @@ dependencies = [
  "hyper-util",
  "pretty_env_logger",
  "reqwest",
- "server-core",
  "tokio",
 ]
 
@@ -1020,10 +1019,6 @@ dependencies = [
  "ryu",
  "serde",
 ]
-
-[[package]]
-name = "server-core"
-version = "0.1.0"
 
 [[package]]
 name = "shlex"
