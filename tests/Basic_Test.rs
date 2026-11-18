@@ -1,10 +1,8 @@
 use std::process::Command;
 
-
 #[test]
 #[ignore = "Example only: server process runs indefinitely so this test will hang"]
 fn test_main_function() {
-
     // Integration tests often invoke main and check for IO. Longer to run but more realistic.
     let output = Command::new(env!("CARGO_BIN_EXE_rss-server-side"))
         .output()
