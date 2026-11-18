@@ -97,9 +97,9 @@ mod tests {
     //  2. A function call, with some inputs (hardcoded, generated, or test fixture)
     //  3. An assertion that the output is what you expect
     #[test]
+    #[ignore = "Example only: Use this to create unit tests in future modules"]
     fn descriptive_test_name() {
-        // let result = add(2, 2);
-        // assert_eq!(result, 4);
-        assert!(true);
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
