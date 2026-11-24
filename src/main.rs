@@ -25,9 +25,7 @@ const LONG_POLL_TIMEOUT: Duration = Duration::from_secs(30);
 //Really basic version of long polling which notifies client when webpage changed
 //TODO for this function:
 //
-async fn long_poll(
-    state: Arc<AppState>,
-) -> Result<Response<Full<Bytes>>, Infallible> {
+async fn long_poll(state: Arc<AppState>) -> Result<Response<Full<Bytes>>, Infallible> {
     let message = tokio::select! {
         _ = state.notify.notified() => "changed",
 
@@ -44,7 +42,6 @@ async fn long_poll(
     Ok(response)
 }
 
-
 //Async function which fetchs url from the argument and return the response
 //TODO for this function:
 //
@@ -54,7 +51,10 @@ async fn fetch_url(
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().query().unwrap_or("");
 
-    let url = query.split("&").find_map(|pair| pair.strip_prefix("url=")).unwrap_or("");
+    let url = query
+        .split("&")
+        .find_map(|pair| pair.strip_prefix("url="))
+        .unwrap_or("");
 
     if url.is_empty() {
         return Ok(Response::new(Full::new(Bytes::from(
@@ -85,12 +85,11 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create a reqwest client to be used for fetching URLs
     let client = Client::new();
 
-    // Shared state for all connections. 
+    // Shared state for all connections.
     // Wrapped in an Arc so each spawned task can hold a clone with less resource
     let state = Arc::new(AppState {
         notify: Notify::new(),
     });
-
 
     // Simple loop to test long polling
     // Run index.html to verify if client receives data from the server
@@ -103,7 +102,6 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     });
 
-
     // Bind to the port and listen for incoming TCP connections
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
@@ -111,7 +109,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // When an incoming TCP connection is received grab a TCP stream for
         // client<->server communication.
         let (tcp, _) = listener.accept().await?;
-        
+
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
         // `hyper::rt` IO traits.
         let io = TokioIo::new(tcp);
@@ -128,18 +126,19 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 if let Err(err) = http1::Builder::new()
                     .timer(TokioTimer::new())
                     .serve_connection(
-                        io, 
+                        io,
                         service_fn(move |req| {
                             //These are cloned again so they own its references
                             let client = client.clone();
                             let state = state.clone();
-                            
+
                             async move {
                                 match req.uri().path() {
                                     "/fetch" => fetch_url(req, &client).await,
                                     "/updates" => long_poll(state).await,
                                     _ => {
-                                        let mut response = Response::new(Full::new(Bytes::from("Not Found")));
+                                        let mut response =
+                                            Response::new(Full::new(Bytes::from("Not Found")));
                                         *response.status_mut() = hyper::StatusCode::NOT_FOUND;
                                         Ok(response)
                                     }
