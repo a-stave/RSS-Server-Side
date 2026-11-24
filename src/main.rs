@@ -47,14 +47,14 @@ async fn long_poll(
 
 //Async function which fetchs url from the argument and return the response
 //TODO for this function:
-//Modify the function to process query without forcing the url param to be first
+//
 async fn fetch_url(
     req: Request<impl hyper::body::Body>,
     client: &Client,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().query().unwrap_or("");
 
-    let url = query.strip_prefix("url=").unwrap_or("");
+    let url = query.split("&").find_map(|pair| pair.strip_prefix("url=")).unwrap_or("");
 
     if url.is_empty() {
         return Ok(Response::new(Full::new(Bytes::from(
