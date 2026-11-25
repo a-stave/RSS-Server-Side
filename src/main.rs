@@ -80,24 +80,10 @@ pub trait OriginHttpClient {
     }
 }
 
-#[async_trait::async_trait]
-pub trait WebsiteRepository: Send + Sync {
-    async fn get_website(
-        &self,
-        id: i64,
-    ) -> Result<Option<Website>, RepositoryError>;
-
-    async fn update_website(
-        &self,
-        website: Website,
-    ) -> Result<(), RepositoryError>;
-}
-
 pub struct PostgresRepository {
     // Database connection pool
     //TODO: Add database connection pool here
 }
-
 pub async fn watch_url(mut client: impl OriginHttpClient) -> ! {
     const DAY: u64 = 86400;
 
@@ -293,4 +279,8 @@ fn compute_age(
 
 fn parse<T: std::str::FromStr>(headers: &header::HeaderMap, name: header::HeaderName) -> Option<T> {
     headers.get(name)?.to_str().ok()?.parse().ok()
+}
+
+pub fn main() {
+    
 }
