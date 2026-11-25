@@ -4,11 +4,11 @@ use bytes::Bytes;
 use http::{StatusCode, header};
 use http_body_util::BodyExt;
 use httpdate::HttpDate;
-use std::time::{Duration, SystemTime};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, SystemTime};
 use tokio::time::Instant;
 
-type ContentHasher = Blake2s<derigest::consts::U6>;
+type ContentHasher = Blake2s<digest::consts::U6>;
 
 pub type ContentHash = [u8; {
     let bytes_len: usize = <<ContentHasher as digest::OutputSizeUser>::OutputSize as digest::typenum::ToInt<usize>>::INT;
