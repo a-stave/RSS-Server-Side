@@ -2,6 +2,8 @@
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::Bytes;
 use http_body_util::Full;
@@ -11,16 +13,44 @@ use hyper::{Request, Response};
 use hyper_util::rt::{TokioIo, TokioTimer};
 use reqwest::Client;
 use tokio::net::TcpListener;
+use tokio::sync::Notify;
 
-// An async function that consumes a request, does nothing with it and returns a
-// response.
+struct AppState {
+    notify: Notify,
+}
+
+const LONG_POLL_TIMEOUT: Duration = Duration::from_secs(30);
+
+//Async function for long polling
+//Really basic version of long polling which notifies client when webpage changed
+async fn long_poll(state: Arc<AppState>) -> Result<Response<Full<Bytes>>, Infallible> {
+    let message = tokio::select! {
+        _ = state.notify.notified() => "changed",
+
+        _ = tokio::time::sleep(LONG_POLL_TIMEOUT) => "timeout",
+    };
+
+    let mut response = Response::new(Full::new(Bytes::from(message)));
+
+    response.headers_mut().insert(
+        hyper::header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        hyper::header::HeaderValue::from_static("*"),
+    );
+
+    Ok(response)
+}
+
+//Async function which fetchs url from the argument and return the response
 async fn fetch_url(
     req: Request<impl hyper::body::Body>,
     client: &Client,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().query().unwrap_or("");
 
-    let url = query.strip_prefix("url=").unwrap_or("");
+    let url = query
+        .split("&")
+        .find_map(|pair| pair.strip_prefix("url="))
+        .unwrap_or("");
 
     if url.is_empty() {
         return Ok(Response::new(Full::new(Bytes::from(
@@ -51,19 +81,31 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create a reqwest client to be used for fetching URLs
     let client = Client::new();
 
+    // Shared state for all connections.
+    // Wrapped in an Arc so each spawned task can hold a clone with less resource
+    let state = Arc::new(AppState {
+        notify: Notify::new(),
+    });
+
+    // Simple loop to test long polling
+    // Run index.html to verify if client receives data from the server
+    let monitor_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            println!("Website changed");
+            monitor_state.notify.notify_waiters();
+        }
+    });
+
     // Bind to the port and listen for incoming TCP connections
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
     loop {
         // When an incoming TCP connection is received grab a TCP stream for
         // client<->server communication.
-        //
-        // Note, this is a .await point, this loop will loop forever but is not a busy loop. The
-        // .await point allows the Tokio runtime to pull the task off of the thread until the task
-        // has work to do. In this case, a connection arrives on the port we are listening on and
-        // the task is woken up, at which point the task is then put back on a thread, and is
-        // driven forward by the runtime, eventually yielding a TCP stream.
         let (tcp, _) = listener.accept().await?;
+
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
         // `hyper::rt` IO traits.
         let io = TokioIo::new(tcp);
@@ -73,12 +115,33 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // to finish
         tokio::task::spawn({
             let client = client.clone();
+            let state = state.clone();
             async move {
                 // Handle the connection from the client using HTTP1 and pass any
                 // HTTP requests received on that connection to the `hello` function
                 if let Err(err) = http1::Builder::new()
                     .timer(TokioTimer::new())
-                    .serve_connection(io, service_fn(|req| fetch_url(req, &client)))
+                    .serve_connection(
+                        io,
+                        service_fn(move |req| {
+                            //These are cloned again so they own its references
+                            let client = client.clone();
+                            let state = state.clone();
+
+                            async move {
+                                match req.uri().path() {
+                                    "/fetch" => fetch_url(req, &client).await,
+                                    "/updates" => long_poll(state).await,
+                                    _ => {
+                                        let mut response =
+                                            Response::new(Full::new(Bytes::from("Not Found")));
+                                        *response.status_mut() = hyper::StatusCode::NOT_FOUND;
+                                        Ok(response)
+                                    }
+                                }
+                            }
+                        }),
+                    )
                     .await
                 {
                     println!("Error serving connection: {:?}", err);

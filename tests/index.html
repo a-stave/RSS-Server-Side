@@ -1,0 +1,52 @@
+<!-- THIS IS A FILE TO TEST IF THE CLIENT GETS NOTIFIED FROM LONG POLL -->
+
+<!doctype html>
+<html>
+  <head>
+    <title>Long Polling Test</title>
+  </head>
+  <body>
+    <h1>Long Polling Client</h1>
+
+    <p id="status">Connecting...</p>
+    <p id="updates">Updates received: 0</p>
+
+    <script>
+      const HUB_URL = "http://127.0.0.1:3000";
+      let updateCount = 0;
+
+      async function poll() {
+        while (true) {
+          try {
+            document.getElementById("status").textContent =
+              "Waiting for updates...";
+
+            // Send a long-polling request
+            const response = await fetch(`${HUB_URL}/updates`);
+
+            const message = (await response.text()).trim();
+
+            updateCount++;
+
+            document.getElementById("status").textContent =
+              `Received: ${message} at ${new Date().toLocaleTimeString()}`;
+
+            document.getElementById("updates").textContent =
+              `Updates received: ${updateCount}`;
+
+            //Added a pause so the received message can be seen.
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          } catch (error) {
+            document.getElementById("status").textContent =
+              `Connection error: ${error}`;
+
+            // Wait before reconnecting after an error
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+      }
+
+      poll();
+    </script>
+  </body>
+</html>
