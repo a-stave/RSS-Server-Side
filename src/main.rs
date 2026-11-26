@@ -23,8 +23,6 @@ const LONG_POLL_TIMEOUT: Duration = Duration::from_secs(30);
 
 //Async function for long polling
 //Really basic version of long polling which notifies client when webpage changed
-//TODO for this function:
-//
 async fn long_poll(state: Arc<AppState>) -> Result<Response<Full<Bytes>>, Infallible> {
     let message = tokio::select! {
         _ = state.notify.notified() => "changed",
@@ -43,8 +41,6 @@ async fn long_poll(state: Arc<AppState>) -> Result<Response<Full<Bytes>>, Infall
 }
 
 //Async function which fetchs url from the argument and return the response
-//TODO for this function:
-//
 async fn fetch_url(
     req: Request<impl hyper::body::Body>,
     client: &Client,

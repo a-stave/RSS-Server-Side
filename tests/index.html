@@ -13,7 +13,6 @@
 
     <script>
       const HUB_URL = "http://127.0.0.1:3000";
-
       let updateCount = 0;
 
       async function poll() {
@@ -25,7 +24,7 @@
             // Send a long-polling request
             const response = await fetch(`${HUB_URL}/updates`);
 
-            const message = await response.text();
+            const message = (await response.text()).trim();
 
             updateCount++;
 
@@ -34,6 +33,9 @@
 
             document.getElementById("updates").textContent =
               `Updates received: ${updateCount}`;
+
+            //Added a pause so the received message can be seen.
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           } catch (error) {
             document.getElementById("status").textContent =
               `Connection error: ${error}`;
