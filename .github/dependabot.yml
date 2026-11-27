@@ -1,0 +1,31 @@
+# Basic `dependabot.yml` file with
+# minimum configuration for Rust package manager
+
+version: 2
+updates:
+  # Enable version updates for cargo
+  - package-ecosystem: "cargo"
+    # Look for `Cargo.toml` and `lock` files in the `root` directory
+    directory: "/"
+    # Check the Cargo registry for updates every week on meeting days
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    # Raise all cargo pull requests with assignee
+    assignees:
+      - "a-stave"
+    # Use subdirectory `CODEOWNERS` file to help auto-assign PRs to relevant teams
+    #  See `https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
+
+    # By default Dependabot limits itself to 5 PRs and gives them `dependencies`
+    # and `Cargo` labels, so no need to change that here
+    # open-pull-requests-limit: ...
+    # labels: ...
+
+    # Group minor- and patch-level fixes together. Major updates are individual to
+    # account for possible code-breaking changes.
+    groups:
+      rust-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
